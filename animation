@@ -1,0 +1,133 @@
+/* 
+ * WIRE TYPO
+ * Made with ThreeJS - Enjoy!
+ * https://threejs.org/
+ *
+ * Experimenting with wireframe typography.
+ * Move the cursor to zoom in/out.
+ * On mobile touch + drag screen to zoom in/out.
+ *
+ * #019 - #100DaysOfCode
+ * By ilithya | 2019
+ */
+
+ const soundfile=new audio ('soundfile.mp3') soundfile.play ();
+
+const colorBg = '#212121'; // Black
+const colorWire = '#18FFFF'; // blue
+
+const nearDist = 0.1;
+const farDist = 1000;
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    nearDist,
+    farDist
+);
+camera.position.z = farDist;
+
+const renderer = new THREE.WebGLRenderer({
+    alpha: true,
+    antialias: true
+});
+renderer.setClearColor(colorBg, 0); // Set the bg via CSS instead, for a gradient effect
+renderer.setPixelRatio(window.devicePixelRatio); // For HiDPI devices to prevent bluring output canvas
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.querySelector("#canvas-wrapper").appendChild(renderer.domElement);
+
+// CREATE TYPOGRAPHY
+const group = new THREE.Group(); // To add 3d float effect
+const typoLoader = new THREE.FontLoader();
+const createTypo = font => {
+    const word = "wire";
+    const typoSize = 120;
+    const typoProperties = {
+        font: font,
+        size: typoSize,
+        height: typoSize * 3,
+        curveSegments: 1,
+        bevelEnabled: true,
+        bevelThickness: 0.1,
+        bevelSize: 2,
+        bevelOffset: 0,
+        bevelSegments: 3
+    };
+    const textMesh = new THREE.Mesh();
+
+    textMesh.geometry = new THREE.TextBufferGeometry(word, typoProperties);
+    textMesh.material = new THREE.MeshBasicMaterial({
+        color: (colorWire),
+        wireframe: true,
+    });
+
+    // Let's center typo in scene by creating an actual bounding box
+    textMesh.geometry.computeBoundingBox();
+    textMesh.geometry
+        .boundingBox
+        .getCenter(textMesh.position)
+        .multiplyScalar(-1);
+
+    // Manually control when 3D transformations recalculation occurs for better performance
+    textMesh.matrixAutoUpdate = false;
+    textMesh.updateMatrix();
+
+    group.add(textMesh);
+};
+typoLoader.load(
+    "https://threejs.org/examples/fonts/helvetiker_bold.typeface.json",
+    createTypo
+);
+scene.add(group);
+
+// CREATE PART OF THE MOUSE/TOUCH OVER EFFECT
+let mouseX = 0;
+let mouseY = 0;
+const mouseFX = {
+    windowHalfX: window.innerWidth / 2,
+    windowHalfY: window.innerHeight / 2,
+    coordinates: function(coordX, coordY) {
+        mouseX = coordX - mouseFX.windowHalfX;
+        mouseY = coordY - mouseFX.windowHalfY;
+
+        mouseX = mouseX < 0 ? Math.abs(mouseX) : mouseX;
+    },
+    onMouseMove: function(e) {
+        mouseFX.coordinates(e.clientX, e.clientY);
+    },
+    onTouchMove: function(e) {
+        const touchX = e.changedTouches[0].clientX * 2;
+        const touchY = e.changedTouches[0].clientY * 2;
+        mouseFX.coordinates(touchX, touchY);
+    }
+};
+document.addEventListener("mousemove", mouseFX.onMouseMove, false);
+document.addEventListener("touchmove", mouseFX.onTouchMove, false);
+
+// RESIZE CANVAS
+const resizeCanvas = () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+};
+window.addEventListener("resize", resizeCanvas, false);
+
+// RENDER 3D GRAPHIC
+const render = () => {
+    requestAnimationFrame(render);
+
+    // Camera animation
+    const ct = 0.05;
+    const pZ = (mouseX - camera.position.z) * ct;
+    camera.position.z += pZ;
+
+    // Floating animation
+    const radians = Date.now() * 0.0005;
+    const rot = Math.sin(radians) * 0.1;
+    group.rotation.x = rot;
+    group.rotation.y = rot;
+
+    renderer.render(scene, camera);
+};
+render();
